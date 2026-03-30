@@ -1,0 +1,2319 @@
+<!doctype html>
+<html lang="nl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>RouteToHBO Quest</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/lucide@0.263.0/dist/umd/lucide.min.js"></script>
+    <script src="/_sdk/element_sdk.js"></script>
+    <script src="/_sdk/data_sdk.js"></script>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        height: 100%;
+        font-family: "Space Mono", "Courier New", monospace;
+      }
+      body {
+        background: linear-gradient(
+          135deg,
+          #0a0e27 0%,
+          #1a1a4d 50%,
+          #0f2347 100%
+        );
+        position: relative;
+        overflow-x: hidden;
+      }
+      body::before {
+        content: "";
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background:
+          radial-gradient(
+            circle at 20% 50%,
+            rgba(0, 255, 200, 0.05) 0%,
+            transparent 50%
+          ),
+          radial-gradient(
+            circle at 80% 80%,
+            rgba(255, 0, 150, 0.05) 0%,
+            transparent 50%
+          );
+        pointer-events: none;
+        z-index: 0;
+      }
+      .app-wrapper {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        overflow: auto;
+        position: relative;
+        z-index: 1;
+      }
+      .hud-header {
+        background: linear-gradient(
+          135deg,
+          rgba(0, 255, 200, 0.1) 0%,
+          rgba(255, 0, 150, 0.05) 100%
+        );
+        backdrop-filter: blur(20px);
+        border-bottom: 3px solid #00ffcc;
+        color: white;
+        padding: 1.5rem 2rem;
+        box-shadow: 0 8px 32px rgba(0, 255, 200, 0.2);
+        position: sticky;
+        top: 0;
+        z-index: 100;
+      }
+      .hud-content {
+        max-width: 1400px;
+        margin: 0 auto;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 2rem;
+        flex-wrap: wrap;
+      }
+      .player-info {
+        display: flex;
+        align-items: center;
+        gap: 1.5rem;
+      }
+      .player-name {
+        font-size: 1.4rem;
+        font-weight: 700;
+        color: #00ffff;
+        text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+        letter-spacing: 2px;
+      }
+      .stats-display {
+        display: flex;
+        gap: 2rem;
+        flex-wrap: wrap;
+      }
+      .stat-item {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        color: #00ffff;
+        font-weight: 600;
+        letter-spacing: 0.5px;
+      }
+      .stat-label {
+        color: rgba(0, 255, 255, 0.6);
+        font-size: 0.85rem;
+      }
+      .stat-value {
+        color: #00ffcc;
+        font-size: 1.1rem;
+        font-weight: 700;
+      }
+      .xp-bar {
+        width: 200px;
+        height: 12px;
+        background: rgba(0, 255, 200, 0.1);
+        border: 2px solid rgba(0, 255, 200, 0.3);
+        border-radius: 6px;
+        overflow: hidden;
+        position: relative;
+      }
+      .xp-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #00ffcc 0%, #ff00ff 100%);
+        box-shadow: 0 0 10px rgba(0, 255, 200, 0.7);
+        transition: width 0.3s ease;
+      }
+      .game-container {
+        flex: 1;
+        max-width: 1400px;
+        width: 100%;
+        margin: 0 auto;
+        padding: 2rem;
+      }
+      .game-view {
+        display: none;
+        animation: fadeIn 0.4s ease;
+      }
+      .game-view.active {
+        display: block;
+      }
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+      .creation-screen {
+        text-align: center;
+        padding: 3rem 0;
+      }
+      .creation-title {
+        font-size: 3rem;
+        font-weight: 900;
+        background: linear-gradient(
+          135deg,
+          #00ffcc 0%,
+          #ff00ff 50%,
+          #00ffcc 100%
+        );
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        margin-bottom: 2rem;
+        letter-spacing: 2px;
+      }
+      .creation-card {
+        background: linear-gradient(
+          135deg,
+          rgba(0, 255, 200, 0.08) 0%,
+          rgba(255, 0, 150, 0.05) 100%
+        );
+        backdrop-filter: blur(20px);
+        border: 2px solid rgba(0, 255, 200, 0.3);
+        border-radius: 16px;
+        padding: 3rem;
+        max-width: 600px;
+        margin: 0 auto;
+        box-shadow: 0 8px 32px rgba(0, 255, 200, 0.2);
+      }
+      .input-group {
+        margin-bottom: 2rem;
+        text-align: left;
+      }
+      .input-group label {
+        display: block;
+        color: #00ffcc;
+        font-weight: 700;
+        margin-bottom: 0.75rem;
+        letter-spacing: 1px;
+      }
+      .input-group input {
+        width: 100%;
+        padding: 1rem;
+        border: 2px solid rgba(0, 255, 200, 0.3);
+        border-radius: 8px;
+        background: rgba(0, 255, 200, 0.05);
+        color: #00ffff;
+        font-family: inherit;
+        font-size: 1rem;
+        transition: all 0.3s ease;
+      }
+      .input-group input:focus {
+        outline: none;
+        border-color: #ff00ff;
+        background: rgba(0, 255, 200, 0.1);
+        box-shadow: 0 0 20px rgba(255, 0, 255, 0.4);
+      }
+      .btn-primary {
+        background: linear-gradient(135deg, #00ffcc 0%, #ff00ff 100%);
+        color: #000;
+        border: none;
+        padding: 1.2rem 3rem;
+        border-radius: 12px;
+        cursor: pointer;
+        font-weight: 700;
+        font-size: 1.1rem;
+        transition: all 0.3s ease;
+        box-shadow: 0 0 20px rgba(0, 255, 200, 0.6);
+        letter-spacing: 1px;
+        position: relative;
+        overflow: hidden;
+      }
+      .btn-primary:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 0 40px rgba(0, 255, 200, 0.8);
+      }
+      .btn-secondary {
+        background: rgba(0, 255, 200, 0.1);
+        border: 2px solid rgba(0, 255, 200, 0.3);
+        color: #00ffff;
+        padding: 0.8rem 2rem;
+        border-radius: 8px;
+        cursor: pointer;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        letter-spacing: 0.5px;
+      }
+      .btn-secondary:hover {
+        background: rgba(0, 255, 200, 0.15);
+        border-color: #00ffcc;
+        transform: translateY(-2px);
+      }
+      .world-view {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 2rem;
+      }
+      .quest-card {
+        background: linear-gradient(
+          135deg,
+          rgba(0, 255, 200, 0.08) 0%,
+          rgba(255, 0, 150, 0.05) 100%
+        );
+        backdrop-filter: blur(20px);
+        border: 2px solid rgba(0, 255, 200, 0.3);
+        border-radius: 16px;
+        padding: 2rem;
+        cursor: pointer;
+        transition: all 0.4s ease;
+        position: relative;
+        overflow: hidden;
+      }
+      .quest-card:hover {
+        transform: translateY(-12px) scale(1.02);
+        box-shadow: 0 16px 48px rgba(0, 255, 200, 0.4);
+        border-color: #00ffcc;
+      }
+      .quest-icon {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+        display: inline-block;
+      }
+      .quest-title {
+        font-size: 1.4rem;
+        font-weight: 700;
+        color: #00ffcc;
+        margin-bottom: 0.5rem;
+        letter-spacing: 1px;
+      }
+      .quest-description {
+        color: #00ffff;
+        font-size: 0.95rem;
+        line-height: 1.6;
+        margin-bottom: 1rem;
+      }
+      .quest-reward {
+        background: rgba(0, 255, 200, 0.1);
+        padding: 0.75rem;
+        border-radius: 8px;
+        color: #00ffcc;
+        font-weight: 600;
+        text-align: center;
+        border: 1px solid rgba(0, 255, 200, 0.3);
+        letter-spacing: 0.5px;
+      }
+      .challenge-view {
+        background: linear-gradient(
+          135deg,
+          rgba(0, 255, 200, 0.08) 0%,
+          rgba(255, 0, 150, 0.05) 100%
+        );
+        border: 2px solid rgba(0, 255, 200, 0.3);
+        border-radius: 16px;
+        padding: 3rem;
+        max-width: 900px;
+        margin: 0 auto;
+        box-shadow: 0 8px 32px rgba(0, 255, 200, 0.2);
+      }
+      .challenge-title {
+        font-size: 2rem;
+        color: #00ffcc;
+        margin-bottom: 2rem;
+        text-align: center;
+        letter-spacing: 1px;
+      }
+      .challenge-questions {
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+      }
+      .challenge-question {
+        color: #00ffff;
+        font-size: 1.1rem;
+        margin-bottom: 1rem;
+        font-weight: 600;
+      }
+      .answer-options {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+      }
+      .answer-btn {
+        background: rgba(0, 255, 200, 0.1);
+        border: 2px solid rgba(0, 255, 200, 0.3);
+        color: #00ffff;
+        padding: 1rem;
+        border-radius: 8px;
+        cursor: pointer;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        text-align: left;
+        letter-spacing: 0.5px;
+      }
+      .answer-btn:hover {
+        background: rgba(0, 255, 200, 0.15);
+        border-color: #00ffcc;
+        transform: translateX(8px);
+        box-shadow: 0 0 15px rgba(0, 255, 200, 0.4);
+      }
+      .answer-btn.correct {
+        background: rgba(0, 255, 100, 0.3);
+        border-color: #00ff64;
+        color: #00ff64;
+      }
+      .answer-btn.incorrect {
+        background: rgba(255, 0, 100, 0.3);
+        border-color: #ff0064;
+        color: #ff0064;
+      }
+      .modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.7);
+        backdrop-filter: blur(5px);
+        z-index: 1000;
+        justify-content: center;
+        align-items: center;
+      }
+      .modal.show {
+        display: flex;
+      }
+      .modal-content {
+        background: linear-gradient(
+          135deg,
+          rgba(0, 255, 200, 0.08) 0%,
+          rgba(255, 0, 150, 0.05) 100%
+        );
+        border: 3px solid rgba(0, 255, 200, 0.5);
+        border-radius: 20px;
+        padding: 2.5rem;
+        max-width: 500px;
+        box-shadow: 0 0 50px rgba(0, 255, 200, 0.4);
+        text-align: center;
+        animation: slideIn 0.4s ease;
+      }
+      @keyframes slideIn {
+        from {
+          opacity: 0;
+          transform: scale(0.9);
+        }
+        to {
+          opacity: 1;
+          transform: scale(1);
+        }
+      }
+      .modal-title {
+        font-size: 2rem;
+        color: #00ffcc;
+        margin-bottom: 1rem;
+        letter-spacing: 1px;
+      }
+      .modal-message {
+        color: #00ffff;
+        font-size: 1rem;
+        margin-bottom: 2rem;
+        line-height: 1.6;
+      }
+      .modal-buttons {
+        display: flex;
+        gap: 1rem;
+        justify-content: center;
+        flex-wrap: wrap;
+      }
+      .footer {
+        background: linear-gradient(
+          135deg,
+          rgba(0, 255, 200, 0.08) 0%,
+          rgba(255, 0, 150, 0.05) 100%
+        );
+        border-top: 2px solid rgba(0, 255, 200, 0.3);
+        color: #00ffff;
+        padding: 1.5rem;
+        text-align: center;
+        font-size: 0.9rem;
+        letter-spacing: 0.5px;
+      }
+      .info-card {
+        background: linear-gradient(
+          135deg,
+          rgba(0, 255, 200, 0.08) 0%,
+          rgba(255, 0, 150, 0.05) 100%
+        );
+        border: 2px solid rgba(0, 255, 200, 0.3);
+        border-radius: 16px;
+        padding: 2rem;
+        color: #00ffff;
+        line-height: 1.8;
+      }
+      .skill-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 1.5rem;
+        margin: 1.5rem 0;
+      }
+      .skill-card {
+        background: linear-gradient(
+          135deg,
+          rgba(0, 255, 200, 0.08) 0%,
+          rgba(255, 0, 150, 0.05) 100%
+        );
+        border: 2px solid rgba(0, 255, 200, 0.3);
+        border-radius: 12px;
+        padding: 1.5rem;
+        color: #00ffff;
+        transition: all 0.3s ease;
+      }
+      .skill-card:hover {
+        transform: translateY(-8px);
+        border-color: #00ffcc;
+        box-shadow: 0 8px 24px rgba(0, 255, 200, 0.2);
+      }
+      .skill-card h4 {
+        color: #00ffcc;
+        font-size: 1.2rem;
+        margin-bottom: 0.75rem;
+        font-weight: 700;
+      }
+      .skill-card p {
+        font-size: 0.9rem;
+        line-height: 1.6;
+        margin-bottom: 1rem;
+      }
+      .skill-level {
+        display: flex;
+        gap: 0.25rem;
+      }
+      .skill-star {
+        color: #ff00ff;
+        font-size: 0.9rem;
+      }
+      @media (max-width: 768px) {
+        .hud-content {
+          flex-direction: column;
+          gap: 1rem;
+        }
+        .stats-display {
+          flex-direction: column;
+          gap: 0.5rem;
+        }
+        .creation-title {
+          font-size: 2rem;
+        }
+        .game-container {
+          padding: 1rem;
+        }
+        .world-view {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+    <style>
+      body {
+        box-sizing: border-box;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app-wrapper">
+      <header class="hud-header">
+        <div class="hud-content">
+          <div class="player-info">
+            <div><div class="player-name" id="playerName">Speler</div></div>
+          </div>
+          <div class="stats-display">
+            <div class="stat-item">
+              <span class="stat-label">LEVEL</span>
+              <span class="stat-value" id="playerLevel">1</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">XP</span>
+              <div class="xp-bar">
+                <div class="xp-fill" id="xpFill" style="width: 0%"></div>
+              </div>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">QUESTS</span>
+              <span class="stat-value" id="questsCompleted">0</span>
+            </div>
+          </div>
+        </div>
+      </header>
+      <main class="game-container">
+        <!-- Character Creation View -->
+        <div class="game-view active" id="creationView">
+          <div class="creation-screen">
+            <h1 class="creation-title">⚔️ RouteToHBO Quest</h1>
+            <div class="creation-card">
+              <h2
+                style="
+                  color: #00ffcc;
+                  margin-bottom: 1.5rem;
+                  font-size: 1.5rem;
+                  letter-spacing: 1px;
+                "
+              >
+                Maak je Karakter
+              </h2>
+              <div class="input-group">
+                <label for="playerNameInput">Avonturier Naam</label>
+                <input
+                  type="text"
+                  id="playerNameInput"
+                  placeholder="Voer je naam in..."
+                />
+              </div>
+              <button class="btn-primary" onclick="startGame()">
+                Begin je Avontuur
+              </button>
+            </div>
+          </div>
+        </div>
+        <!-- Main Menu -->
+        <div class="game-view" id="menuView">
+          <div style="max-width: 1200px; margin: 0 auto">
+            <div style="text-align: center; margin-bottom: 3rem">
+              <h1
+                style="
+                  color: #00ffcc;
+                  margin-bottom: 1rem;
+                  font-size: 2.5rem;
+                  letter-spacing: 2px;
+                "
+              >
+                🎮 HBO Avontuur
+              </h1>
+              <p style="color: #00ffff; margin-bottom: 0; font-size: 1.1rem">
+                Welkom,
+                <span
+                  id="menuPlayerName"
+                  style="color: #00ffcc; font-weight: 700"
+                  >Avonturier</span
+                >!
+              </p>
+            </div>
+            <!-- Featured Section -->
+            <div
+              style="
+                background: linear-gradient(
+                  135deg,
+                  rgba(0, 255, 200, 0.15) 0%,
+                  rgba(255, 0, 150, 0.08) 100%
+                );
+                border: 2px solid rgba(0, 255, 200, 0.4);
+                border-radius: 16px;
+                padding: 2rem;
+                margin-bottom: 2rem;
+              "
+            >
+              <h2
+                style="
+                  color: #00ffcc;
+                  font-size: 1.6rem;
+                  margin-bottom: 1rem;
+                  letter-spacing: 1px;
+                "
+              >
+                ⭐ Wat is HBO?
+              </h2>
+              <p
+                style="
+                  color: #00ffff;
+                  font-size: 1rem;
+                  line-height: 1.8;
+                  margin-bottom: 1.5rem;
+                "
+              >
+                HBO (Hoger Beroepsonderwijs) is een praktijkgerichte opleiding
+                van 4 jaar die je voorbereidt op een succesvolle carrière. Met
+                HBO krijg je de perfecte balans tussen theorie en praktijk!
+              </p>
+              <div
+                style="
+                  display: grid;
+                  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+                  gap: 1rem;
+                "
+              >
+                <div
+                  style="
+                    background: rgba(0, 255, 200, 0.1);
+                    padding: 1rem;
+                    border-radius: 8px;
+                    border-left: 4px solid #00ffcc;
+                  "
+                >
+                  <div
+                    style="
+                      color: #00ffcc;
+                      font-weight: 700;
+                      margin-bottom: 0.5rem;
+                    "
+                  >
+                    💼 85% Direct Werk
+                  </div>
+                  <div style="color: #00ffff; font-size: 0.9rem">
+                    Vind direct een baan na afstuderen
+                  </div>
+                </div>
+                <div
+                  style="
+                    background: rgba(0, 255, 200, 0.1);
+                    padding: 1rem;
+                    border-radius: 8px;
+                    border-left: 4px solid #ff00ff;
+                  "
+                >
+                  <div
+                    style="
+                      color: #ff00ff;
+                      font-weight: 700;
+                      margin-bottom: 0.5rem;
+                    "
+                  >
+                    💰 €28-40K Startloon
+                  </div>
+                  <div style="color: #00ffff; font-size: 0.9rem">
+                    Competitieve inkomsten direct
+                  </div>
+                </div>
+                <div
+                  style="
+                    background: rgba(0, 255, 200, 0.1);
+                    padding: 1rem;
+                    border-radius: 8px;
+                    border-left: 4px solid #00ffcc;
+                  "
+                >
+                  <div
+                    style="
+                      color: #00ffcc;
+                      font-weight: 700;
+                      margin-bottom: 0.5rem;
+                    "
+                  >
+                    🌍 Europees Erkend
+                  </div>
+                  <div style="color: #00ffff; font-size: 0.9rem">
+                    Geldig in heel Europa
+                  </div>
+                </div>
+              </div>
+            </div>
+            <!-- Navigation Grid -->
+            <div
+              style="
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+                gap: 1.5rem;
+                margin-bottom: 3rem;
+              "
+            >
+              <button
+                class="quest-card"
+                onclick="switchView('questsView')"
+                style="cursor: pointer; text-align: center"
+              >
+                <div style="font-size: 2.5rem; margin-bottom: 1rem">⚔️</div>
+                <div
+                  style="
+                    font-size: 1.3rem;
+                    color: #00ffcc;
+                    font-weight: 700;
+                    margin-bottom: 0.5rem;
+                  "
+                >
+                  Quests
+                </div>
+                <div
+                  style="color: #00ffff; font-size: 0.9rem; margin-bottom: 1rem"
+                >
+                  Test je kennis en verdien XP
+                </div>
+                <div
+                  style="color: #00ffcc; font-size: 0.8rem; font-weight: 600"
+                >
+                  Klik om te starten →
+                </div>
+              </button>
+              <button
+                class="quest-card"
+                onclick="switchView('matcherView')"
+                style="
+                  cursor: pointer;
+                  text-align: center;
+                  background: linear-gradient(
+                    135deg,
+                    rgba(255, 0, 150, 0.15) 0%,
+                    rgba(0, 255, 200, 0.1) 100%
+                  );
+                  border-color: rgba(255, 0, 150, 0.4);
+                "
+              >
+                <div style="font-size: 2.5rem; margin-bottom: 1rem">🎯</div>
+                <div
+                  style="
+                    font-size: 1.3rem;
+                    color: #ff00ff;
+                    font-weight: 700;
+                    margin-bottom: 0.5rem;
+                  "
+                >
+                  Richtingen Test
+                </div>
+                <div
+                  style="color: #00ffff; font-size: 0.9rem; margin-bottom: 1rem"
+                >
+                  Ontdek welke opleiding bij jou past!
+                </div>
+                <div
+                  style="color: #ff00ff; font-size: 0.8rem; font-weight: 600"
+                >
+                  ⭐ Klik voor Match →
+                </div>
+              </button>
+              <button
+                class="quest-card"
+                onclick="switchView('infoView')"
+                style="cursor: pointer; text-align: center"
+              >
+                <div style="font-size: 2.5rem; margin-bottom: 1rem">📚</div>
+                <div
+                  style="
+                    font-size: 1.3rem;
+                    color: #00ffcc;
+                    font-weight: 700;
+                    margin-bottom: 0.5rem;
+                  "
+                >
+                  HBO Info
+                </div>
+                <div
+                  style="color: #00ffff; font-size: 0.9rem; margin-bottom: 1rem"
+                >
+                  Alles over HBO onderwijs
+                </div>
+                <div
+                  style="color: #00ffcc; font-size: 0.8rem; font-weight: 600"
+                >
+                  Klik om te lezen →
+                </div>
+              </button>
+              <button
+                class="quest-card"
+                onclick="switchView('skillsView')"
+                style="cursor: pointer; text-align: center"
+              >
+                <div style="font-size: 2.5rem; margin-bottom: 1rem">💡</div>
+                <div
+                  style="
+                    font-size: 1.3rem;
+                    color: #00ffcc;
+                    font-weight: 700;
+                    margin-bottom: 0.5rem;
+                  "
+                >
+                  Richtingen
+                </div>
+                <div
+                  style="color: #00ffff; font-size: 0.9rem; margin-bottom: 1rem"
+                >
+                  HBO specialisaties &amp; salaris
+                </div>
+                <div
+                  style="color: #00ffcc; font-size: 0.8rem; font-weight: 600"
+                >
+                  Klik om te ontdekken →
+                </div>
+              </button>
+              <button
+                class="quest-card"
+                onclick="switchView('skillsAdvancedView')"
+                style="cursor: pointer; text-align: center"
+              >
+                <div style="font-size: 2.5rem; margin-bottom: 1rem">🛠️</div>
+                <div
+                  style="
+                    font-size: 1.3rem;
+                    color: #00ffcc;
+                    font-weight: 700;
+                    margin-bottom: 0.5rem;
+                  "
+                >
+                  Vaardigheden
+                </div>
+                <div
+                  style="color: #00ffff; font-size: 0.9rem; margin-bottom: 1rem"
+                >
+                  Leer welke skills je nodig hebt
+                </div>
+                <div
+                  style="color: #00ffcc; font-size: 0.8rem; font-weight: 600"
+                >
+                  Klik om te verkennen →
+                </div>
+              </button>
+              <button
+                class="quest-card"
+                onclick="switchView('careersView')"
+                style="cursor: pointer; text-align: center"
+              >
+                <div style="font-size: 2.5rem; margin-bottom: 1rem">🚀</div>
+                <div
+                  style="
+                    font-size: 1.3rem;
+                    color: #00ffcc;
+                    font-weight: 700;
+                    margin-bottom: 0.5rem;
+                  "
+                >
+                  Carrières
+                </div>
+                <div
+                  style="color: #00ffff; font-size: 0.9rem; margin-bottom: 1rem"
+                >
+                  Jouw pad naar succes
+                </div>
+                <div
+                  style="color: #00ffcc; font-size: 0.8rem; font-weight: 600"
+                >
+                  Klik voor mogelijkheden →
+                </div>
+              </button>
+              <button
+                class="quest-card"
+                onclick="switchView('comparisonsView')"
+                style="cursor: pointer; text-align: center"
+              >
+                <div style="font-size: 2.5rem; margin-bottom: 1rem">⚖️</div>
+                <div
+                  style="
+                    font-size: 1.3rem;
+                    color: #00ffcc;
+                    font-weight: 700;
+                    margin-bottom: 0.5rem;
+                  "
+                >
+                  Vergelijken
+                </div>
+                <div
+                  style="color: #00ffff; font-size: 0.9rem; margin-bottom: 1rem"
+                >
+                  HBO vs MBO vs Universiteit
+                </div>
+                <div
+                  style="color: #00ffcc; font-size: 0.8rem; font-weight: 600"
+                >
+                  Klik voor details →
+                </div>
+              </button>
+            </div>
+            <!-- Stats Section -->
+            <div
+              style="
+                background: linear-gradient(
+                  135deg,
+                  rgba(255, 0, 150, 0.1) 0%,
+                  rgba(0, 255, 200, 0.08) 100%
+                );
+                border: 2px solid rgba(255, 0, 150, 0.3);
+                border-radius: 16px;
+                padding: 2rem;
+              "
+            >
+              <h3
+                style="
+                  color: #ff00ff;
+                  font-size: 1.4rem;
+                  margin-bottom: 1.5rem;
+                  letter-spacing: 1px;
+                "
+              >
+                📊 HBO in Nederland
+              </h3>
+              <div
+                style="
+                  display: grid;
+                  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+                  gap: 1.5rem;
+                "
+              >
+                <div>
+                  <div
+                    style="
+                      color: #00ffcc;
+                      font-size: 2rem;
+                      font-weight: 700;
+                      margin-bottom: 0.5rem;
+                    "
+                  >
+                    2.1M
+                  </div>
+                  <div style="color: #00ffff">HBO Studenten in NL</div>
+                </div>
+                <div>
+                  <div
+                    style="
+                      color: #ff00ff;
+                      font-size: 2rem;
+                      font-weight: 700;
+                      margin-bottom: 0.5rem;
+                    "
+                  >
+                    17
+                  </div>
+                  <div style="color: #00ffff">Grote HBO Instellingen</div>
+                </div>
+                <div>
+                  <div
+                    style="
+                      color: #00ffcc;
+                      font-size: 2rem;
+                      font-weight: 700;
+                      margin-bottom: 0.5rem;
+                    "
+                  >
+                    500+
+                  </div>
+                  <div style="color: #00ffff">Studierichtingen Beschikbaar</div>
+                </div>
+                <div>
+                  <div
+                    style="
+                      color: #ff00ff;
+                      font-size: 2rem;
+                      font-weight: 700;
+                      margin-bottom: 0.5rem;
+                    "
+                  >
+                    91%
+                  </div>
+                  <div style="color: #00ffff">Tevredenheid Afgestudeerden</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- Quests View -->
+        <div class="game-view" id="questsView">
+          <h1
+            style="
+              color: #00ffcc;
+              margin-bottom: 2rem;
+              font-size: 2rem;
+              letter-spacing: 1px;
+            "
+          >
+            ⚔️ Beschikbare Quests
+          </h1>
+          <div class="world-view" id="questsList"></div>
+          <div style="margin-top: 2rem; text-align: center">
+            <button class="btn-secondary" onclick="switchView('menuView')">
+              ← Terug naar Menu
+            </button>
+          </div>
+        </div>
+        <!-- Info View -->
+        <div class="game-view" id="infoView">
+          <div style="max-width: 900px; margin: 0 auto">
+            <h1
+              style="
+                color: #00ffcc;
+                margin-bottom: 2rem;
+                font-size: 2rem;
+                letter-spacing: 1px;
+              "
+            >
+              📚 Wat is HBO?
+            </h1>
+            <div class="info-card">
+              <p style="margin-bottom: 1.5rem">
+                <strong style="color: #00ffcc; font-size: 1.2rem"
+                  >HBO (Hoger Beroepsonderwijs)</strong
+                >
+              </p>
+              <p style="margin-bottom: 1.5rem">
+                HBO is hoger onderwijs gericht op praktische vaardigheden en
+                beroepsvoorbereiding. Het biedt een evenwicht tussen theorie en
+                praktijk!
+              </p>
+              <p
+                style="
+                  margin: 1.5rem 0 1rem 0;
+                  color: #00ffcc;
+                  font-weight: 700;
+                  font-size: 1.1rem;
+                "
+              >
+                ✅ Voordelen van HBO:
+              </p>
+              <ul style="margin-left: 1.5rem; margin-bottom: 1.5rem">
+                <li>🎯 Direct toepasbare vaardigheden in het beroep</li>
+                <li>💼 Excellent job prospects na afstuderen</li>
+                <li>💰 Competitieve startalarissen (€28.000 - €40.000)</li>
+                <li>🤝 Nauwe samenwerking met bedrijven en projecten</li>
+                <li>📈 Duidelijke carrièremogelijkheden</li>
+                <li>🌍 Erkenning op Europese arbeidsmarkt</li>
+                <li>🎓 Mogelijkheid doorstroming naar Master</li>
+                <li>💻 Moderne technologieën en tools</li>
+              </ul>
+              <p
+                style="
+                  margin: 1.5rem 0 1rem 0;
+                  color: #00ffcc;
+                  font-weight: 700;
+                  font-size: 1.1rem;
+                "
+              >
+                🔄 HBO vs MBO vs Universiteit:
+              </p>
+              <table style="width: 100%; border-collapse: collapse">
+                <tbody>
+                  <tr style="border-bottom: 2px solid rgba(0, 255, 200, 0.3)">
+                    <td
+                      style="
+                        padding: 0.75rem;
+                        color: #00ffcc;
+                        font-weight: 600;
+                        text-align: left;
+                      "
+                    >
+                      Aspect
+                    </td>
+                    <td
+                      style="
+                        padding: 0.75rem;
+                        color: #00ffcc;
+                        font-weight: 600;
+                        text-align: center;
+                      "
+                    >
+                      HBO
+                    </td>
+                    <td
+                      style="
+                        padding: 0.75rem;
+                        color: #00ffcc;
+                        font-weight: 600;
+                        text-align: center;
+                      "
+                    >
+                      MBO
+                    </td>
+                    <td
+                      style="
+                        padding: 0.75rem;
+                        color: #00ffcc;
+                        font-weight: 600;
+                        text-align: center;
+                      "
+                    >
+                      Universiteit
+                    </td>
+                  </tr>
+                  <tr style="border-bottom: 1px solid rgba(0, 255, 200, 0.2)">
+                    <td style="padding: 0.75rem">Duur</td>
+                    <td style="padding: 0.75rem; text-align: center">4 jaar</td>
+                    <td style="padding: 0.75rem; text-align: center">
+                      2-4 jaar
+                    </td>
+                    <td style="padding: 0.75rem; text-align: center">
+                      3-4 jaar
+                    </td>
+                  </tr>
+                  <tr style="border-bottom: 1px solid rgba(0, 255, 200, 0.2)">
+                    <td style="padding: 0.75rem">Praktijk %</td>
+                    <td style="padding: 0.75rem; text-align: center">50%</td>
+                    <td style="padding: 0.75rem; text-align: center">80%</td>
+                    <td style="padding: 0.75rem; text-align: center">30%</td>
+                  </tr>
+                  <tr style="border-bottom: 1px solid rgba(0, 255, 200, 0.2)">
+                    <td style="padding: 0.75rem">Startloon</td>
+                    <td
+                      style="
+                        padding: 0.75rem;
+                        text-align: center;
+                        color: #00ffcc;
+                      "
+                    >
+                      €32.000
+                    </td>
+                    <td style="padding: 0.75rem; text-align: center">
+                      €24.000
+                    </td>
+                    <td style="padding: 0.75rem; text-align: center">
+                      €35.000
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 0.75rem">Doorstroom</td>
+                    <td style="padding: 0.75rem; text-align: center">
+                      ✅ Master
+                    </td>
+                    <td style="padding: 0.75rem; text-align: center">
+                      Via HBO
+                    </td>
+                    <td style="padding: 0.75rem; text-align: center">✅ PhD</td>
+                  </tr>
+                </tbody>
+              </table>
+              <p
+                style="
+                  margin: 1.5rem 0 0 0;
+                  color: #00ffcc;
+                  font-weight: 700;
+                  font-size: 1.1rem;
+                "
+              >
+                💡 Waarom HBO Kiezen?
+              </p>
+              <p style="margin-top: 1rem">
+                HBO is ideaal als je direct wilt gaan werken en praktische
+                vaardigheden zoekt. Je krijgt een erkend diploma dat je overal
+                ter wereld kunt gebruiken!
+              </p>
+            </div>
+            <div style="margin-top: 2rem; text-align: center">
+              <button class="btn-secondary" onclick="switchView('menuView')">
+                ← Terug naar Menu
+              </button>
+            </div>
+          </div>
+        </div>
+        <!-- Skills & Directions View -->
+        <div class="game-view" id="skillsView">
+          <div style="max-width: 900px; margin: 0 auto">
+            <h1
+              style="
+                color: #00ffcc;
+                margin-bottom: 2rem;
+                font-size: 2rem;
+                letter-spacing: 1px;
+              "
+            >
+              💡 HBO Richtingen &amp; Specialisaties
+            </h1>
+            <div style="display: grid; gap: 1.5rem">
+              <div class="info-card">
+                <h3
+                  style="color: #00ffcc; font-size: 1.3rem; margin-bottom: 1rem"
+                >
+                  💻 ICT &amp; Informatica
+                </h3>
+                <p style="margin-bottom: 1rem">
+                  <strong>Vaardigheden:</strong> Programmeren, Web Development,
+                  Databases, Cloud Computing, AI/ML, Cybersecurity, Software
+                  Engineering
+                </p>
+                <p style="margin-bottom: 0.75rem">
+                  <strong style="color: #00ffcc">💰 Startloon:</strong> €32.000
+                  - €38.000
+                </p>
+                <p style="margin-bottom: 0.75rem">
+                  <strong style="color: #00ffcc">📊 Werkloosheid:</strong> 2.5%
+                  (zeer laag!)
+                </p>
+                <p style="margin-bottom: 0.75rem">
+                  <strong style="color: #ff00ff">📈 Vraag:</strong> EXTREEM HOOG
+                  - grote tekort!
+                </p>
+                <p>
+                  <strong style="color: #00ffcc">🏢 Werkgevers:</strong> Google,
+                  Microsoft, ING, ABN AMRO, Philips, Nederlandse Startups
+                </p>
+              </div>
+              <div class="info-card">
+                <h3
+                  style="color: #00ffcc; font-size: 1.3rem; margin-bottom: 1rem"
+                >
+                  🎨 CMD (Communicatie &amp; Multimedia Design)
+                </h3>
+                <p style="margin-bottom: 1rem">
+                  <strong>Vaardigheden:</strong> UX/UI Design, Grafisch Ontwerp,
+                  Motion Graphics, Web Design, Brand Design, Interaction Design,
+                  Prototyping
+                </p>
+                <p style="margin-bottom: 0.75rem">
+                  <strong style="color: #00ffcc">💰 Startloon:</strong> €26.000
+                  - €30.000
+                </p>
+                <p style="margin-bottom: 0.75rem">
+                  <strong style="color: #00ffcc">📊 Werkloosheid:</strong> 4%
+                  (laag)
+                </p>
+                <p style="margin-bottom: 0.75rem">
+                  <strong style="color: #ff00ff">📈 Vraag:</strong> Hoog -
+                  creatieven gezocht
+                </p>
+                <p>
+                  <strong style="color: #00ffcc">🏢 Werkgevers:</strong>
+                  Creatieve Agentschappen, KPN, ING, Designbureaus, Tech
+                  Bedrijven
+                </p>
+              </div>
+              <div class="info-card">
+                <h3
+                  style="color: #00ffcc; font-size: 1.3rem; margin-bottom: 1rem"
+                >
+                  📊 Data Science &amp; Analytics
+                </h3>
+                <p style="margin-bottom: 1rem">
+                  <strong>Vaardigheden:</strong> Data Analysis, SQL, Python,
+                  Business Intelligence, Statistics, Machine Learning, Data
+                  Visualization
+                </p>
+                <p style="margin-bottom: 0.75rem">
+                  <strong style="color: #00ffcc">💰 Startloon:</strong> €33.000
+                  - €40.000
+                </p>
+                <p style="margin-bottom: 0.75rem">
+                  <strong style="color: #00ffcc">📊 Werkloosheid:</strong> 2%
+                  (zeer laag!)
+                </p>
+                <p style="margin-bottom: 0.75rem">
+                  <strong style="color: #ff00ff">📈 Vraag:</strong> EXTREEM HOOG
+                  - toekomstgericht
+                </p>
+                <p>
+                  <strong style="color: #00ffcc">🏢 Werkgevers:</strong>
+                  Consultancy bedrijven, Banken, E-commerce, Tech Bedrijven,
+                  Analytics Bureaus
+                </p>
+              </div>
+              <div class="info-card">
+                <h3
+                  style="color: #00ffcc; font-size: 1.3rem; margin-bottom: 1rem"
+                >
+                  💼 Bedrijfskunde &amp; Management
+                </h3>
+                <p style="margin-bottom: 1rem">
+                  <strong>Vaardigheden:</strong> Projectmanagement, Finance,
+                  Marketing, Operations, Supply Chain, HR, Strategic Planning
+                </p>
+                <p style="margin-bottom: 0.75rem">
+                  <strong style="color: #00ffcc">💰 Startloon:</strong> €28.000
+                  - €35.000
+                </p>
+                <p style="margin-bottom: 0.75rem">
+                  <strong style="color: #00ffcc">📊 Werkloosheid:</strong> 3.5%
+                  (laag)
+                </p>
+                <p style="margin-bottom: 0.75rem">
+                  <strong style="color: #ff00ff">📈 Vraag:</strong> Steady hoog
+                  - altijd nodig
+                </p>
+                <p>
+                  <strong style="color: #00ffcc">🏢 Werkgevers:</strong> Alle
+                  grote bedrijven, Consultancy, Overheid, Non-profits
+                </p>
+              </div>
+            </div>
+            <div style="margin-top: 2rem; text-align: center">
+              <button class="btn-secondary" onclick="switchView('menuView')">
+                ← Terug naar Menu
+              </button>
+            </div>
+          </div>
+        </div>
+        <!-- Advanced Skills View -->
+        <div class="game-view" id="skillsAdvancedView">
+          <div style="max-width: 1000px; margin: 0 auto">
+            <h1
+              style="
+                color: #00ffcc;
+                margin-bottom: 0.5rem;
+                font-size: 2rem;
+                letter-spacing: 1px;
+              "
+            >
+              🛠️ Essentiële Vaardigheden voor HBO
+            </h1>
+            <p style="color: #00ffff; margin-bottom: 2rem; font-size: 1rem">
+              Leer welke hard &amp; soft skills je nodig hebt om succesvol te
+              zijn
+            </p>
+            <!-- Technical Skills -->
+            <h2
+              style="
+                color: #ff00ff;
+                font-size: 1.5rem;
+                margin-bottom: 1.5rem;
+                margin-top: 2rem;
+                letter-spacing: 0.5px;
+              "
+            >
+              💻 Technische Vaardigheden (Per Richting)
+            </h2>
+            <div class="skill-grid">
+              <div class="skill-card">
+                <h4>🖥️ ICT - Programmeren</h4>
+                <p>
+                  Python, Java, JavaScript, C++. Begin met Python - het is het
+                  makkelijkst!
+                </p>
+                <div class="skill-level">
+                  <span class="skill-star">★★★★★</span>
+                  <span style="color: #00ffff; font-size: 0.85rem"
+                    >Essentieel</span
+                  >
+                </div>
+              </div>
+              <div class="skill-card">
+                <h4>🎨 ICT - Web Development</h4>
+                <p>
+                  HTML, CSS, JavaScript, React, Vue. Frontend en Backend skills.
+                </p>
+                <div class="skill-level">
+                  <span class="skill-star">★★★★★</span>
+                  <span style="color: #00ffff; font-size: 0.85rem"
+                    >Essentieel</span
+                  >
+                </div>
+              </div>
+              <div class="skill-card">
+                <h4>🔐 ICT - Cybersecurity</h4>
+                <p>
+                  Network Security, Encryption, Penetration Testing, Risk
+                  Management.
+                </p>
+                <div class="skill-level">
+                  <span class="skill-star">★★★★☆</span>
+                  <span style="color: #00ffff; font-size: 0.85rem"
+                    >Zeer Belangrijk</span
+                  >
+                </div>
+              </div>
+              <div class="skill-card">
+                <h4>📊 Data Science - Python &amp; SQL</h4>
+                <p>
+                  Python (Pandas, NumPy), SQL databases, Data manipulation. De
+                  kern!
+                </p>
+                <div class="skill-level">
+                  <span class="skill-star">★★★★★</span>
+                  <span style="color: #00ffff; font-size: 0.85rem"
+                    >Essentieel</span
+                  >
+                </div>
+              </div>
+              <div class="skill-card">
+                <h4>📈 Data Science - Visualisatie</h4>
+                <p>
+                  Tableau, Power BI, Matplotlib, Seaborn. Data begrijpelijk
+                  maken.
+                </p>
+                <div class="skill-level">
+                  <span class="skill-star">★★★★☆</span>
+                  <span style="color: #00ffff; font-size: 0.85rem"
+                    >Zeer Belangrijk</span
+                  >
+                </div>
+              </div>
+              <div class="skill-card">
+                <h4>🎨 CMD - Design Tools</h4>
+                <p>
+                  Figma, Adobe Creative Suite (Photoshop, Illustrator), Sketch,
+                  Prototyping.
+                </p>
+                <div class="skill-level">
+                  <span class="skill-star">★★★★★</span>
+                  <span style="color: #00ffff; font-size: 0.85rem"
+                    >Essentieel</span
+                  >
+                </div>
+              </div>
+              <div class="skill-card">
+                <h4>🎨 CMD - UX/UI Principes</h4>
+                <p>
+                  User Research, Wireframing, Prototyping, Usability Testing,
+                  Design Systems.
+                </p>
+                <div class="skill-level">
+                  <span class="skill-star">★★★★★</span>
+                  <span style="color: #00ffff; font-size: 0.85rem"
+                    >Essentieel</span
+                  >
+                </div>
+              </div>
+              <div class="skill-card">
+                <h4>💼 Bedrijfskunde - Excel</h4>
+                <p>
+                  Spreadsheets, Formulas, Pivot Tables, Data Analysis.
+                  Unersetzlich!
+                </p>
+                <div class="skill-level">
+                  <span class="skill-star">★★★★☆</span>
+                  <span style="color: #00ffff; font-size: 0.85rem"
+                    >Zeer Belangrijk</span
+                  >
+                </div>
+              </div>
+            </div>
+            <!-- Soft Skills -->
+            <h2
+              style="
+                color: #ff00ff;
+                font-size: 1.5rem;
+                margin-bottom: 1.5rem;
+                margin-top: 2rem;
+                letter-spacing: 0.5px;
+              "
+            >
+              🌟 Soft Skills (Voor Iedereen!)
+            </h2>
+            <div class="skill-grid">
+              <div class="skill-card">
+                <h4>💬 Communicatie</h4>
+                <p>
+                  Presenteren, schrijven, luisteren. Duidelijk je ideeën
+                  uitleggen. HEEL belangrijk!
+                </p>
+                <div class="skill-level">
+                  <span class="skill-star">★★★★★</span>
+                  <span style="color: #00ffff; font-size: 0.85rem"
+                    >Essentieel</span
+                  >
+                </div>
+              </div>
+              <div class="skill-card">
+                <h4>🤝 Samenwerking</h4>
+                <p>
+                  Teamwork, conflict resolution, empathie. Je werkt nooit
+                  alleen!
+                </p>
+                <div class="skill-level">
+                  <span class="skill-star">★★★★★</span>
+                  <span style="color: #00ffff; font-size: 0.85rem"
+                    >Essentieel</span
+                  >
+                </div>
+              </div>
+              <div class="skill-card">
+                <h4>⏱️ Projectmanagement</h4>
+                <p>
+                  Planning, deadline management, organisatie. Dingen afmaken!
+                </p>
+                <div class="skill-level">
+                  <span class="skill-star">★★★★☆</span>
+                  <span style="color: #00ffff; font-size: 0.85rem"
+                    >Zeer Belangrijk</span
+                  >
+                </div>
+              </div>
+              <div class="skill-card">
+                <h4>🧠 Probleemoplossing</h4>
+                <p>
+                  Analytisch denken, creativiteit, logisch redeneren. De kern
+                  van werken!
+                </p>
+                <div class="skill-level">
+                  <span class="skill-star">★★★★★</span>
+                  <span style="color: #00ffff; font-size: 0.85rem"
+                    >Essentieel</span
+                  >
+                </div>
+              </div>
+              <div class="skill-card">
+                <h4>🎯 Leren &amp; Adaptatie</h4>
+                <p>
+                  Nieuwsgierig zijn, groeimindset, altijd bijleren. Tech
+                  verandert snel!
+                </p>
+                <div class="skill-level">
+                  <span class="skill-star">★★★★★</span>
+                  <span style="color: #00ffff; font-size: 0.85rem"
+                    >Essentieel</span
+                  >
+                </div>
+              </div>
+              <div class="skill-card">
+                <h4>🎬 Leiderschap</h4>
+                <p>
+                  Initiatieven nemen, anderen motiveren, verantwoording nemen.
+                </p>
+                <div class="skill-level">
+                  <span class="skill-star">★★★★☆</span>
+                  <span style="color: #00ffff; font-size: 0.85rem"
+                    >Zeer Belangrijk</span
+                  >
+                </div>
+              </div>
+            </div>
+            <!-- Learning Path -->
+            <div
+              style="
+                background: linear-gradient(
+                  135deg,
+                  rgba(0, 255, 200, 0.15) 0%,
+                  rgba(255, 0, 150, 0.08) 100%
+                );
+                border: 2px solid rgba(0, 255, 200, 0.4);
+                border-radius: 16px;
+                padding: 2rem;
+                margin-top: 2rem;
+              "
+            >
+              <h3
+                style="color: #00ffcc; font-size: 1.4rem; margin-bottom: 1.5rem"
+              >
+                🚀 Hoe Start Je Met Leren?
+              </h3>
+              <div style="color: #00ffff; line-height: 1.8">
+                <p style="margin-bottom: 1rem">
+                  <strong style="color: #ff00ff">1. Online Cursussen:</strong>
+                  Codecademy, Coursera, LinkedIn Learning - gratis tot betaald
+                </p>
+                <p style="margin-bottom: 1rem">
+                  <strong style="color: #ff00ff">2. Projecten Maken:</strong> Je
+                  eigen projecten bouwen is de beste leraar
+                </p>
+                <p style="margin-bottom: 1rem">
+                  <strong style="color: #ff00ff">3. Portfolio Opbouwen:</strong>
+                  Laat je werk zien op GitHub of Behance
+                </p>
+                <p style="margin-bottom: 1rem">
+                  <strong style="color: #ff00ff">4. Netwerken:</strong> Volg
+                  experts, join communities, ga naar events
+                </p>
+                <p>
+                  <strong style="color: #ff00ff">5. Praktijk:</strong> Stage
+                  lopen, freelance projecten, open source bijdragen
+                </p>
+              </div>
+            </div>
+            <div style="margin-top: 2rem; text-align: center">
+              <button class="btn-secondary" onclick="switchView('menuView')">
+                ← Terug naar Menu
+              </button>
+            </div>
+          </div>
+        </div>
+        <!-- Careers View -->
+        <div class="game-view" id="careersView">
+          <div style="max-width: 900px; margin: 0 auto">
+            <h1
+              style="
+                color: #00ffcc;
+                margin-bottom: 2rem;
+                font-size: 2rem;
+                letter-spacing: 1px;
+              "
+            >
+              🚀 Carrièremogelijkheden na HBO
+            </h1>
+            <div style="display: grid; gap: 1.5rem">
+              <div class="info-card">
+                <h3
+                  style="color: #00ffcc; font-size: 1.3rem; margin-bottom: 1rem"
+                >
+                  🎯 Direct in het Beroepsleven
+                </h3>
+                <p>
+                  HBO-afgestudeerden gaan direct werken in hun vakgebied. Met
+                  praktische vaardigheden ben je onmiddellijk productief en
+                  waardevol voor werkgevers!
+                  <strong style="color: #00ffcc"
+                    >85% vindt direct een baan!</strong
+                  >
+                </p>
+              </div>
+              <div class="info-card">
+                <h3
+                  style="color: #00ffcc; font-size: 1.3rem; margin-bottom: 1rem"
+                >
+                  📈 Carrièrepaden
+                </h3>
+                <p style="margin-bottom: 0.75rem">
+                  <strong style="color: #00ffcc"
+                    >Junior → Senior → Management:</strong
+                  >
+                  Groeimogelijkheden naar leidinggevende posities binnen 5-10
+                  jaar
+                </p>
+                <p style="margin-bottom: 0.75rem">
+                  <strong style="color: #00ffcc">Specialisatie:</strong>
+                  Verdieping in vakgebieden (Expert/Specialist Roles) met hogere
+                  salarissen
+                </p>
+                <p style="margin-bottom: 0.75rem">
+                  <strong style="color: #00ffcc">Ondernemer:</strong> Veel
+                  HBO-afgestudeerden starten hun eigen bedrijf (Startup
+                  founders)
+                </p>
+                <p>
+                  <strong style="color: #00ffcc">Freelancer:</strong>
+                  Onafhankelijk werken, je eigen klanten, flexibele planning
+                </p>
+              </div>
+              <div class="info-card">
+                <h3
+                  style="color: #00ffcc; font-size: 1.3rem; margin-bottom: 1rem"
+                >
+                  🌍 Werkgevers Zoeken HBO Professionals
+                </h3>
+                <p style="margin-bottom: 0.75rem">
+                  📱
+                  <strong style="color: #00ffcc">Tech Bedrijven:</strong>
+                  Google, Microsoft, ING, Philips, KPN, Agile Waterfall,
+                  Booking.com
+                </p>
+                <p style="margin-bottom: 0.75rem">
+                  🏢
+                  <strong style="color: #00ffcc">Grote Organisaties:</strong>
+                  Banken (ABN AMRO, Rabobank), Verzekeringen (Allianz), Overheid
+                  (Gemeente, Defensie)
+                </p>
+                <p style="margin-bottom: 0.75rem">
+                  🚀
+                  <strong style="color: #00ffcc">Startups:</strong> Innovatieve
+                  jonge bedrijven vol mogelijkheden (veel in Amsterdam,
+                  Rotterdam, Groningen)
+                </p>
+                <p style="margin-bottom: 0.75rem">
+                  🎨
+                  <strong style="color: #00ffcc"
+                    >Creatieve Agentschappen:</strong
+                  >
+                  Design &amp; Marketing bureaus (Dept, Fabrique, DDB)
+                </p>
+                <p style="margin-bottom: 0.75rem">
+                  📊
+                  <strong style="color: #00ffcc">Consultancy:</strong> McKinsey,
+                  Deloitte, PwC, Capgemini - allemaal zoeken HBO-ers!
+                </p>
+                <p>
+                  <strong style="color: #00ffcc">🌐 International:</strong> HBO
+                  diploma erkend in heel Europa - werk overal!
+                </p>
+              </div>
+              <div class="info-card">
+                <h3
+                  style="color: #00ffcc; font-size: 1.3rem; margin-bottom: 1rem"
+                >
+                  📊 Salarisontwikkeling
+                </h3>
+                <p
+                  style="
+                    margin-bottom: 1rem;
+                    border-bottom: 1px solid rgba(0, 255, 200, 0.2);
+                    padding-bottom: 1rem;
+                  "
+                >
+                  <strong
+                    style="
+                      color: #00ffcc;
+                      display: block;
+                      margin-bottom: 0.5rem;
+                    "
+                    >HBO Salaris Traject:</strong
+                  ><br />
+                  Junior (Y1-2): €26-32K | Medior (Y3-5): €32-42K | Senior
+                  (Y6+): €42-60K+ | Management: €50-100K+
+                </p>
+                <p>
+                  <strong style="color: #00ffcc">Vergelijking:</strong>
+                  HBO-afgestudeerden verdienen gemiddeld 15-20% meer dan MBO en
+                  hebben meer carrièremogelijkheden!
+                </p>
+              </div>
+              <div class="info-card">
+                <h3
+                  style="color: #00ffcc; font-size: 1.3rem; margin-bottom: 1rem"
+                >
+                  🎓 Verdere Opleiding
+                </h3>
+                <p style="margin-bottom: 0.75rem">
+                  Met een HBO diploma kun je doorstromen naar:
+                </p>
+                <p style="margin-bottom: 0.75rem">
+                  🔹
+                  <strong style="color: #00ffcc"
+                    >Universitaire Masteropleidingen</strong
+                  >
+                  (Research Masters, Executive Masters)
+                </p>
+                <p style="margin-bottom: 0.75rem">
+                  🔹
+                  <strong style="color: #00ffcc"
+                    >Specialistische Certificeringen</strong
+                  >
+                  (Google Cloud, AWS Certified, PMP - Project Management
+                  Professional)
+                </p>
+                <p style="margin-bottom: 0.75rem">
+                  🔹
+                  <strong style="color: #00ffcc">HBO Masters</strong>
+                  (Verdiepende masters aan HBO instellingen)
+                </p>
+                <p>
+                  🔹
+                  <strong style="color: #00ffcc">Doktorale Studies</strong>
+                  (PhD) na Master - voor wie wil onderzoeken
+                </p>
+              </div>
+              <div class="info-card">
+                <h3
+                  style="color: #00ffcc; font-size: 1.3rem; margin-bottom: 1rem"
+                >
+                  💡 Interessante Feiten
+                </h3>
+                <p style="margin-bottom: 0.75rem">
+                  📊 HBO-afgestudeerden verdienen gemiddeld 15-20% meer dan
+                  MBO-afgestudeerden
+                </p>
+                <p style="margin-bottom: 0.75rem">
+                  🌐 HBO diploma's worden erkend in heel Europa (Bologna-accord)
+                  - werk overal!
+                </p>
+                <p style="margin-bottom: 0.75rem">
+                  🚀 ICT professionals zijn het meest gezocht (STEM tekort in NL
+                  &amp; EU)
+                </p>
+                <p style="margin-bottom: 0.75rem">
+                  💼 85% van HBO-afgestudeerden vindt direct een baan
+                  (statistiek CBS)
+                </p>
+                <p style="margin-bottom: 0.75rem">
+                  🎯 Gemiddeld 3 jaar tot eerst promotie in management
+                </p>
+                <p>
+                  🌍 Veel HBO-alumni werken international (UK, Duitsland, USA,
+                  Australië)
+                </p>
+              </div>
+            </div>
+            <div style="margin-top: 2rem; text-align: center">
+              <button class="btn-secondary" onclick="switchView('menuView')">
+                ← Terug naar Menu
+              </button>
+            </div>
+          </div>
+        </div>
+        <!-- Matcher View - Direction Finder -->
+        <div class="game-view" id="matcherView">
+          <div style="max-width: 900px; margin: 0 auto">
+            <h1
+              style="
+                color: #00ffcc;
+                margin-bottom: 1rem;
+                font-size: 2rem;
+                letter-spacing: 1px;
+              "
+            >
+              🎯 Welke HBO Richting Past Bij Jou?
+            </h1>
+            <p
+              style="
+                color: #00ffff;
+                margin-bottom: 2rem;
+                font-size: 1.05rem;
+                line-height: 1.6;
+              "
+            >
+              Beantwoord enkele vragen en ontdek welke opleiding het beste voor
+              jou geschikt is! 🚀
+            </p>
+            <div
+              class="info-card"
+              style="
+                background: linear-gradient(
+                  135deg,
+                  rgba(0, 255, 200, 0.1) 0%,
+                  rgba(255, 0, 150, 0.08) 100%
+                );
+                border: 2px solid rgba(0, 255, 200, 0.4);
+              "
+            >
+              <div
+                id="matcherQuestions"
+                style="display: flex; flex-direction: column; gap: 1.5rem"
+              ></div>
+              <button
+                class="btn-primary"
+                onclick="calculateMatch()"
+                style="width: 100%; margin-top: 2rem"
+              >
+                🎯 Bereken Mijn Match
+              </button>
+            </div>
+            <div style="margin-top: 2rem; text-align: center">
+              <button class="btn-secondary" onclick="switchView('menuView')">
+                ← Terug naar Menu
+              </button>
+            </div>
+          </div>
+        </div>
+        <!-- Matcher Results View -->
+        <div class="game-view" id="matcherResultsView">
+          <div style="max-width: 900px; margin: 0 auto">
+            <h1
+              style="
+                color: #00ffcc;
+                margin-bottom: 2rem;
+                font-size: 2rem;
+                letter-spacing: 1px;
+              "
+            >
+              🎉 Jouw HBO Match Resultaten!
+            </h1>
+            <div id="matcherResults" style="display: grid; gap: 1.5rem"></div>
+            <div style="margin-top: 2rem; text-align: center">
+              <button
+                class="btn-secondary"
+                onclick="switchView('matcherView')"
+                style="margin-right: 1rem"
+              >
+                ← Opnieuw Proberen
+              </button>
+              <button class="btn-secondary" onclick="switchView('menuView')">
+                Terug naar Menu
+              </button>
+            </div>
+          </div>
+        </div>
+        <!-- Comparisons View -->
+        <div class="game-view" id="comparisonsView">
+          <div style="max-width: 1000px; margin: 0 auto">
+            <h1
+              style="
+                color: #00ffcc;
+                margin-bottom: 2rem;
+                font-size: 2rem;
+                letter-spacing: 1px;
+              "
+            >
+              ⚖️ HBO vs MBO vs Universiteit
+            </h1>
+            <div
+              style="
+                background: linear-gradient(
+                  135deg,
+                  rgba(0, 255, 200, 0.08) 0%,
+                  rgba(255, 0, 150, 0.05) 100%
+                );
+                border: 2px solid rgba(0, 255, 200, 0.3);
+                border-radius: 16px;
+                padding: 2rem;
+                margin-bottom: 2rem;
+                overflow-x: auto;
+              "
+            >
+              <table
+                style="width: 100%; border-collapse: collapse; min-width: 600px"
+              >
+                <tbody>
+                  <tr style="border-bottom: 2px solid rgba(0, 255, 200, 0.3)">
+                    <td
+                      style="
+                        padding: 1rem;
+                        color: #00ffcc;
+                        font-weight: 700;
+                        text-align: left;
+                      "
+                    >
+                      Eigenschap
+                    </td>
+                    <td
+                      style="
+                        padding: 1rem;
+                        color: #00ffff;
+                        font-weight: 700;
+                        text-align: center;
+                        background: rgba(0, 255, 200, 0.1);
+                      "
+                    >
+                      HBO ⭐
+                    </td>
+                    <td
+                      style="
+                        padding: 1rem;
+                        color: #00ffff;
+                        font-weight: 700;
+                        text-align: center;
+                      "
+                    >
+                      MBO
+                    </td>
+                    <td
+                      style="
+                        padding: 1rem;
+                        color: #00ffff;
+                        font-weight: 700;
+                        text-align: center;
+                      "
+                    >
+                      Universiteit
+                    </td>
+                  </tr>
+                  <tr style="border-bottom: 1px solid rgba(0, 255, 200, 0.2)">
+                    <td style="padding: 1rem; color: #00ffff">Duur</td>
+                    <td
+                      style="
+                        padding: 1rem;
+                        text-align: center;
+                        background: rgba(0, 255, 200, 0.1);
+                        color: #00ffff;
+                      "
+                    >
+                      4 jaar
+                    </td>
+                    <td
+                      style="padding: 1rem; text-align: center; color: #00ffff"
+                    >
+                      2-4 jaar
+                    </td>
+                    <td
+                      style="padding: 1rem; text-align: center; color: #00ffff"
+                    >
+                      3-6 jaar
+                    </td>
+                  </tr>
+                  <tr style="border-bottom: 1px solid rgba(0, 255, 200, 0.2)">
+                    <td style="padding: 1rem; color: #00ffff">Praktijk %</td>
+                    <td
+                      style="
+                        padding: 1rem;
+                        text-align: center;
+                        background: rgba(0, 255, 200, 0.1);
+                        color: #00ffff;
+                      "
+                    >
+                      50% (Perfect)
+                    </td>
+                    <td
+                      style="padding: 1rem; text-align: center; color: #00ffff"
+                    >
+                      80% (Zeer praktisch)
+                    </td>
+                    <td
+                      style="padding: 1rem; text-align: center; color: #00ffff"
+                    >
+                      30% (Theoretisch)
+                    </td>
+                  </tr>
+                  <tr style="border-bottom: 1px solid rgba(0, 255, 200, 0.2)">
+                    <td style="padding: 1rem; color: #00ffff">Startloon</td>
+                    <td
+                      style="
+                        padding: 1rem;
+                        text-align: center;
+                        background: rgba(0, 255, 200, 0.1);
+                        color: #00ffcc;
+                      "
+                    >
+                      €32.000 🏆
+                    </td>
+                    <td
+                      style="padding: 1rem; text-align: center; color: #00ffff"
+                    >
+                      €24.000
+                    </td>
+                    <td
+                      style="padding: 1rem; text-align: center; color: #00ffff"
+                    >
+                      €35.000
+                    </td>
+                  </tr>
+                  <tr style="border-bottom: 1px solid rgba(0, 255, 200, 0.2)">
+                    <td style="padding: 1rem; color: #00ffff">Job Prospects</td>
+                    <td
+                      style="
+                        padding: 1rem;
+                        text-align: center;
+                        background: rgba(0, 255, 200, 0.1);
+                        color: #00ffff;
+                      "
+                    >
+                      85% direct 🎯
+                    </td>
+                    <td
+                      style="padding: 1rem; text-align: center; color: #00ffff"
+                    >
+                      75%
+                    </td>
+                    <td
+                      style="padding: 1rem; text-align: center; color: #00ffff"
+                    >
+                      80%
+                    </td>
+                  </tr>
+                  <tr style="border-bottom: 1px solid rgba(0, 255, 200, 0.2)">
+                    <td style="padding: 1rem; color: #00ffff">Doorstroom</td>
+                    <td
+                      style="
+                        padding: 1rem;
+                        text-align: center;
+                        background: rgba(0, 255, 200, 0.1);
+                        color: #00ffff;
+                      "
+                    >
+                      ✅ Master
+                    </td>
+                    <td
+                      style="padding: 1rem; text-align: center; color: #00ffff"
+                    >
+                      Via HBO
+                    </td>
+                    <td
+                      style="padding: 1rem; text-align: center; color: #00ffff"
+                    >
+                      ✅ PhD
+                    </td>
+                  </tr>
+                  <tr style="border-bottom: 1px solid rgba(0, 255, 200, 0.2)">
+                    <td style="padding: 1rem; color: #00ffff">Werkgevers</td>
+                    <td
+                      style="
+                        padding: 1rem;
+                        text-align: center;
+                        background: rgba(0, 255, 200, 0.1);
+                        color: #00ffff;
+                      "
+                    >
+                      Alle (Tech, Banken, etc)
+                    </td>
+                    <td
+                      style="padding: 1rem; text-align: center; color: #00ffff"
+                    >
+                      Praktijk bedrijven
+                    </td>
+                    <td
+                      style="padding: 1rem; text-align: center; color: #00ffff"
+                    >
+                      Research, Specialisatie
+                    </td>
+                  </tr>
+                  <tr style="border-bottom: 1px solid rgba(0, 255, 200, 0.2)">
+                    <td style="padding: 1rem; color: #00ffff">Schaal</td>
+                    <td
+                      style="
+                        padding: 1rem;
+                        text-align: center;
+                        background: rgba(0, 255, 200, 0.1);
+                        color: #00ffff;
+                      "
+                    >
+                      Mid-scale (Compact)
+                    </td>
+                    <td
+                      style="padding: 1rem; text-align: center; color: #00ffff"
+                    >
+                      Small (Lokaal)
+                    </td>
+                    <td
+                      style="padding: 1rem; text-align: center; color: #00ffff"
+                    >
+                      Large (Groot)
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 1rem; color: #00ffff">
+                      Kosten (Gemiddeld)
+                    </td>
+                    <td
+                      style="
+                        padding: 1rem;
+                        text-align: center;
+                        background: rgba(0, 255, 200, 0.1);
+                        color: #00ffff;
+                      "
+                    >
+                      €0-2000/jaar
+                    </td>
+                    <td
+                      style="padding: 1rem; text-align: center; color: #00ffff"
+                    >
+                      €0-1000/jaar
+                    </td>
+                    <td
+                      style="padding: 1rem; text-align: center; color: #00ffff"
+                    >
+                      €2000/jaar
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <h2
+              style="
+                color: #ff00ff;
+                font-size: 1.4rem;
+                margin-bottom: 1rem;
+                letter-spacing: 0.5px;
+              "
+            >
+              🤔 Hoe Kies Je?
+            </h2>
+            <div style="display: grid; gap: 1.5rem">
+              <div class="info-card">
+                <h3
+                  style="
+                    color: #00ffcc;
+                    font-size: 1.2rem;
+                    margin-bottom: 0.75rem;
+                  "
+                >
+                  ✅ Kies HBO als je...
+                </h3>
+                <ul style="margin-left: 1.5rem; color: #00ffff">
+                  <li>🎯 Direct wilt gaan werken en praktijk wilt leren</li>
+                  <li>💼 Geïnteresseerd bent in toegepaste wetenschappen</li>
+                  <li>🚀 Snel wilt verdienen en carrière opbouwen</li>
+                  <li>🤝 Graag met bedrijven samenwerkt en stagiaires doet</li>
+                  <li>💰 Een goed startloon wilt + werkzekerheid</li>
+                  <li>🌍 Internationaal wilt werken (erkend in EU)</li>
+                </ul>
+              </div>
+              <div class="info-card">
+                <h3
+                  style="
+                    color: #00ffcc;
+                    font-size: 1.2rem;
+                    margin-bottom: 0.75rem;
+                  "
+                >
+                  ✅ Kies MBO als je...
+                </h3>
+                <ul style="margin-left: 1.5rem; color: #00ffff">
+                  <li>
+                    🛠️ Praktische handen-aan-werk wilt (Elektricien, Loodgieter,
+                    etc)
+                  </li>
+                  <li>📚 Voorkeur hebt voor learn-by-doing</li>
+                  <li>⏱️ Sneller wilt studeren (2-4 jaar)</li>
+                  <li>💵 Minimum kosten wilt</li>
+                  <li>🏗️ Ambachtelijk vak wilt leren</li>
+                </ul>
+              </div>
+              <div class="info-card">
+                <h3
+                  style="
+                    color: #00ffcc;
+                    font-size: 1.2rem;
+                    margin-bottom: 0.75rem;
+                  "
+                >
+                  ✅ Kies Universiteit als je...
+                </h3>
+                <ul style="margin-left: 1.5rem; color: #00ffff">
+                  <li>🔬 Onderzoek &amp; theorie interesseert</li>
+                  <li>🎓 Later PhD studies wilt doen</li>
+                  <li>🏛️ Wetenschappelijk carrière nastreeft</li>
+                  <li>🌍 International onderzoekswereld wilt</li>
+                  <li>
+                    📖 Graag diep in theorie duikt (Wetenschapper, Professor)
+                  </li>
+                </ul>
+              </div>
+            </div>
+            <div
+              style="
+                background: linear-gradient(
+                  135deg,
+                  rgba(255, 0, 150, 0.1) 0%,
+                  rgba(0, 255, 200, 0.08) 100%
+                );
+                border: 2px solid rgba(255, 0, 150, 0.3);
+                border-radius: 16px;
+                padding: 2rem;
+                margin-top: 2rem;
+              "
+            >
+              <h3
+                style="color: #ff00ff; font-size: 1.3rem; margin-bottom: 1rem"
+              >
+                🏆 HBO: De Gouden Middenweg
+              </h3>
+              <p style="color: #00ffff; line-height: 1.8">
+                HBO is perfect als je het beste van beide werelden wilt:
+                <strong style="color: #00ffcc"
+                  >theorie EN praktijk, snelle carrière EN grondige
+                  voorbereiding</strong
+                >. Je studeert 4 jaar met stages en projecten, en gaat direct
+                werken waar je veel verdient en groeit.
+              </p>
+            </div>
+            <div style="margin-top: 2rem; text-align: center">
+              <button class="btn-secondary" onclick="switchView('menuView')">
+                ← Terug naar Menu
+              </button>
+            </div>
+          </div>
+        </div>
+        <!-- Challenge View -->
+        <div class="game-view" id="challengeView">
+          <div class="challenge-view">
+            <div class="challenge-title" id="challengeTitle">
+              HBO Kennis Challenge
+            </div>
+            <div class="challenge-questions" id="challengeContent"></div>
+            <div style="margin-top: 2rem; text-align: center">
+              <button class="btn-secondary" onclick="backToQuests()">
+                ← Terug naar Quests
+              </button>
+            </div>
+          </div>
+        </div>
+      </main>
+      <footer class="footer">
+        <p>© 2024 RouteToHBO Quest | Level Up je Toekomst! ⚡</p>
+      </footer>
+    </div>
+    <!-- Modal for Rewards -->
+    <div class="modal" id="rewardModal">
+      <div class="modal-content">
+        <div class="modal-title" id="modalTitle">🎉 Quest Voltooid!</div>
+        <div class="modal-message" id="modalMessage">
+          Geweldig gedaan! Je hebt 100 XP verdiend
+        </div>
+        <div class="modal-buttons">
+          <button class="btn-primary" onclick="closeModal()">Doorgaan</button>
+        </div>
+      </div>
+    </div>
+    <script>
+      let config = {       game_title: 'RouteToHBO Quest',       welcome_message: 'Welkom, avonturier!'     };     const defaultConfig = {       game_title: 'RouteToHBO Quest RPG',       welcome_message: 'Welkom, avonturier!'     };     window.elementSdk.init({       defaultConfig,       onConfigChange: async (newConfig) => {         config = newConfig;       },       mapToCapabilities: (cfg) => ({         recolorables: [],         borderables: [],         fontEditable: undefined,         fontSizeable: undefined       }),       mapToEditPanelValues: (cfg) => new Map([         ['game_title', cfg.game_title || defaultConfig.game_title],         ['welcome_message', cfg.welcome_message || defaultConfig.welcome_message]       ])     });     let playerData = null;     let currentPlayer = null;     const directions = [       {         id: 'ict',         name: '💻 ICT & Informatica',         emoji: '🖥️',         description: 'Programmeren, Web Development, Cybersecurity, AI/ML',         salary: '€32-38K',         unemployment: '2.5%',         keywords: ['programmeren', 'technologie', 'computers', 'logisch', 'probleem', 'code', 'webdesign', 'data'],         traits: ['tech', 'logic', 'problem-solving']       },       {         id: 'cmd',         name: '🎨 CMD - Design & Multimedia',         emoji: '🖌️',         description: 'UX/UI Design, Grafisch Ontwerp, Branding, Motion Graphics',         salary: '€26-30K',         unemployment: '4%',         keywords: ['creatief', 'design', 'art', 'visueel', 'kleur', 'mooi', 'ontwerp', 'graffisch'],         traits: ['creative', 'artistic', 'visual']       },       {         id: 'data',         name: '📊 Data Science & Analytics',         emoji: '📈',         description: 'Data Analysis, Python, SQL, Machine Learning, BI',         salary: '€33-40K',         unemployment: '2%',         keywords: ['data', 'analyse', 'getallen', 'statistiek', 'python', 'informatie', 'inzicht', 'patroon'],         traits: ['analytical', 'tech', 'math']       },       {         id: 'business',         name: '💼 Bedrijfskunde & Management',         emoji: '📊',         description: 'Management, Finance, Marketing, Operations, HR',         salary: '€28-35K',         unemployment: '3.5%',         keywords: ['bedrijf', 'management', 'geld', 'organisatie', 'mensen', 'leider', 'strategie', 'project'],         traits: ['leadership', 'business', 'people']       }     ];     const matcherQuestions = [       {         q: 'Wat interesseert jou het meest?',         options: [           { text: '💻 Technologie & Code', values: { tech: 2, logic: 2 } },           { text: '🎨 Creativiteit & Design', values: { creative: 3, artistic: 2 } },           { text: '📊 Data & Analyse', values: { analytical: 3, math: 2, tech: 1 } },           { text: '💼 Bedrijf & Leiderschap', values: { leadership: 3, business: 2 } }         ]       },       {         q: 'Je werkstijl is het liefst:',         options: [           { text: 'Creatief & Vrij', values: { creative: 2, artistic: 1 } },           { text: 'Logisch & Analytisch', values: { logic: 2, analytical: 2, math: 1 } },           { text: 'Technisch & Hands-on', values: { tech: 2, problem_solving: 1 } },           { text: 'Sociaal & Teamwerk', values: { people: 2, leadership: 1, business: 1 } }         ]       },       {         q: 'Welk type problem los je graag op?',         options: [           { text: 'Hoe maak ik dit mooier & intuïtiever?', values: { creative: 2, artistic: 2, visual: 1 } },           { text: 'Hoe werkten deze getallen/patterns?', values: { analytical: 3, math: 2, logic: 1 } },           { text: 'Hoe bouw ik dit technisch op?', values: { tech: 3, logic: 1, problem_solving: 2 } },           { text: 'Hoe organiseer/plan ik dit optimaal?', values: { business: 2, leadership: 1 } }         ]       },       {         q: 'Je bent goed in:',         options: [           { text: 'Abstract denken & Wiskunde', values: { math: 2, logic: 2, analytical: 1 } },           { text: 'Communicatie & Mensenmanagement', values: { people: 2, leadership: 2, business: 1 } },           { text: 'Visuele dingen (tekenen, kleur)', values: { artistic: 2, creative: 1, visual: 2 } },           { text: 'Computers & IT Hardware/Software', values: { tech: 3, logic: 1, problem_solving: 1 } }         ]       },       {         q: 'Wat motiveert jou het meest?',         options: [           { text: '💡 Nieuwe technologie ontdekken', values: { tech: 2, problem_solving: 1, logic: 1 } },           { text: '🎯 Dingen mooier/beter maken', values: { creative: 2, artistic: 1, visual: 1 } },           { text: '📈 Impact en Groei zien in getallen', values: { analytical: 2, business: 1, math: 1 } },           { text: '🤝 Een team leiden naar succes', values: { leadership: 2, business: 1, people: 1 } }         ]       }     ];     const dataHandler = {       onDataChanged(data) {         if (data && data.length > 0) {           playerData = data;           if (currentPlayer) {             const found = playerData.find(p => p.__backendId === currentPlayer.__backendId);             if (found) {               currentPlayer = found;               updateHUD();             }           }         }       }     };     (async () => {       const result = await window.dataSdk.init(dataHandler);       if (!result.isOk) {         console.error('Data SDK init failed');       }     })();     const quests = [       {         id: 1,         title: '📚 Ontdek HBO',         icon: '🎓',         description: 'Leer wat HBO onderwijs biedt en waarom het perfect voor je kan zijn',         xp: 100,         questions: [           {             q: 'Wat staat HBO voor?',             options: ['Hoger Beroepsonderwijs', 'Hoger Business Onderwijs', 'Hosted Bureau Operations'],             correct: 0           },           {             q: 'Hoe lang duurt een HBO opleiding meestal?',             options: ['2 jaar', '3 jaar', '4 jaar'],             correct: 2           },           {             q: 'Wat is het startloon van een HBO afgestudeerde?',             options: ['€20.000', '€32.000', '€50.000'],             correct: 1           }         ]       },       {         id: 2,         title: '💻 ICT Meester',         icon: '🖥️',         description: 'Verken de wereld van Informatica en Technology',         xp: 150,         questions: [           {             q: 'Welke vaardigheden leer je NIET in ICT HBO?',             options: ['Web Development', 'Python Programmeren', 'Tandheelkunde'],             correct: 2           },           {             q: 'Wat is het werkloosheidspercentage voor ICT professionals?',             options: ['10%', '2,5%', '25%'],             correct: 1           },           {             q: 'Welke skill is CRUCIAAL voor ICT professionals?',             options: ['Dansen', 'Programmeren', 'Zingen'],             correct: 1           }         ]       },       {         id: 3,         title: '🎨 Creatief Ontwerper',         icon: '🖌️',         description: 'Master het creatieve pad: CMD (Communicatie & Multimedia Design)',         xp: 120,         questions: [           {             q: 'Wat staat CMD voor?',             options: ['Computer Music Design', 'Communicatie & Multimedia Design', 'Creative Media Development'],             correct: 1           },           {             q: 'Welke skill is NIET essentieel voor CMD?',             options: ['Grafisch Ontwerp', 'UI/UX Design', 'Computerprogrammeren in C++'],             correct: 2           },           {             q: 'Waar werken CMD professionals het meest?',             options: ['Fabrieken', 'Creatieve Agentschappen & Designbureaus', 'Ziekenhuizen'],             correct: 1           }         ]       },       {         id: 4,         title: '📊 Data Tovenaar',         icon: '📈',         description: 'Transformeer data in krachtige inzichten',         xp: 130,         questions: [           {             q: 'Welke tool gebruiken Data Scientists het meest?',             options: ['Excel alleen', 'Python & SQL', 'Pen & Papier'],             correct: 1           },           {             q: 'In welke sector is data science het MEEST gezocht?',             options: ['Landbouw alleen', 'Alle industrieën', 'Alleen entertainment'],             correct: 1           },           {             q: 'Hoeveel verdient een junior Data Scientist gemiddeld?',             options: ['€18.000', '€35.000', '€70.000'],             correct: 1           }         ]       },       {         id: 5,         title: '🚀 HBO Champion',         icon: '⭐',         description: 'Voltooi deze epische quest en word een ware HBO Champion!',         xp: 200,         questions: [           {             q: 'Wat onderscheidt HBO van MBO het meest?',             options: ['HBO is alleen voor slimme mensen', 'HBO balans theorie & praktijk, meer career mogelijkheden', 'HBO kost veel minder'],             correct: 1           },           {             q: 'Kunnen HBO afgestudeerden doorstromen naar Masters?',             options: ['Nee, nooit', 'Alleen naar buitenlandse Masters', 'Ja, zeker!'],             correct: 2           },           {             q: 'Wat is het grote voordeel van HBO?',             options: ['Veel lesvrij', 'Direct toepasbare vaardigheden & goede job prospects', 'Makkelijker dan MBO'],             correct: 1           }         ]       }     ];     function switchView(viewId) {       document.querySelectorAll('.game-view').forEach(view => {         view.classList.remove('active');       });       document.getElementById(viewId).classList.add('active');     }     function startGame() {       const nameInput = document.getElementById('playerNameInput');       const playerName = nameInput.value.trim() || 'Avonturier';              if (!playerName) return;       createPlayer(playerName);     }     async function createPlayer(playerName) {       const newPlayer = {         player_name: playerName,         level: 1,         xp: 0,         max_xp: 100,         current_quest: '',         quests_completed: 0,         achievements: ''       };       const result = await window.dataSdk.create(newPlayer);       if (result.isOk) {         setTimeout(() => {           if (playerData && playerData.length > 0) {             currentPlayer = playerData[playerData.length - 1];             loadMenu();           }         }, 500);       }     }     function loadMenu() {       document.getElementById('playerName').textContent = currentPlayer.player_name;       document.getElementById('menuPlayerName').textContent = currentPlayer.player_name;       updateHUD();       renderQuests();       initMatcher();       switchView('menuView');     }     function renderQuests() {       const questsList = document.getElementById('questsList');       questsList.innerHTML = '';              quests.forEach(quest => {         const completed = currentPlayer.quests_completed >= quest.id;         const card = document.createElement('div');         card.className = 'quest-card';         card.style.opacity = completed ? '0.6' : '1';         card.style.pointerEvents = completed ? 'none' : 'auto';         card.onclick = () => startChallenge(quest);         card.innerHTML = `           <div class="quest-icon">${quest.icon}</div>           <div class="quest-title">${quest.title}</div>           <div class="quest-description">${quest.description}</div>           <div class="quest-reward">             ${completed ? '✅ VOLTOOID' : `+${quest.xp} XP`}           </div>         `;         questsList.appendChild(card);       });     }     function startChallenge(quest) {       const challengeContent = document.getElementById('challengeContent');       challengeContent.innerHTML = '';              quest.questions.forEach((question, idx) => {         const qDiv = document.createElement('div');         qDiv.style.marginBottom = '2rem';         qDiv.innerHTML = `           <div class="challenge-question">V${idx + 1}: ${question.q}</div>           <div class="answer-options" id="options-${idx}"></div>         `;         challengeContent.appendChild(qDiv);                  const optionsDiv = document.getElementById(`options-${idx}`);         question.options.forEach((option, optIdx) => {           const btn = document.createElement('button');           btn.className = 'answer-btn';           btn.textContent = option;           btn.onclick = () => answerQuestion(idx, optIdx, question.correct, quest);           optionsDiv.appendChild(btn);         });       });              document.getElementById('challengeTitle').textContent = `📋 ${quest.title}`;       switchView('challengeView');     }     function answerQuestion(qIdx, answerIdx, correct, quest) {       const btn = document.querySelectorAll(`#options-${qIdx} .answer-btn`)[answerIdx];       const allBtns = document.querySelectorAll(`#options-${qIdx} .answer-btn`);              allBtns.forEach((b, i) => {         b.disabled = true;         b.style.cursor = 'default';         if (i === correct) {           b.classList.add('correct');         } else if (i === answerIdx && answerIdx !== correct) {           b.classList.add('incorrect');         }       });       setTimeout(() => {         const allAnswered = document.querySelectorAll('.answer-btn:disabled').length === document.querySelectorAll('.answer-btn').length;         if (allAnswered) {           completeQuest(quest);         }       }, 1500);     }     async function completeQuest(quest) {       if (currentPlayer.quests_completed >= quest.id) {         closeModal();         switchView('questsView');         return;       }       const newXP = (currentPlayer.xp || 0) + quest.xp;       const newMaxXP = currentPlayer.max_xp || 100;       let newLevel = currentPlayer.level || 1;              if (newXP >= newMaxXP) {         newLevel += 1;       }       const updatedPlayer = {         ...currentPlayer,         xp: newXP % newMaxXP,         level: newLevel,         max_xp: newMaxXP,         quests_completed: quest.id       };       const result = await window.dataSdk.update(updatedPlayer);       if (result.isOk) {         currentPlayer = updatedPlayer;         updateHUD();         showReward(quest);         // Show alert when quiz is completed         setTimeout(() => {           const message = `🎉 Quiz voltooid!\n\n${quest.title}\n+${quest.xp} XP\nLevel: ${newLevel}`;           showCustomAlert(message);         }, 500);       }     }     function updateHUD() {       if (!currentPlayer) return;       document.getElementById('playerName').textContent = currentPlayer.player_name;       document.getElementById('playerLevel').textContent = currentPlayer.level;       document.getElementById('questsCompleted').textContent = currentPlayer.quests_completed;              const xpPercent = ((currentPlayer.xp || 0) / (currentPlayer.max_xp || 100)) * 100;       document.getElementById('xpFill').style.width = xpPercent + '%';     }     function showReward(quest) {       const modal = document.getElementById('rewardModal');       document.getElementById('modalTitle').textContent = '🎉 ' + quest.title + ' Voltooid!';       document.getElementById('modalMessage').textContent = `Fantastisch! Je hebt ${quest.xp} XP verdiend en bent nu Level ${currentPlayer.level}!`;       modal.classList.add('show');     }     function closeModal() {       document.getElementById('rewardModal').classList.remove('show');       switchView('questsView');       renderQuests();     }     function backToQuests() {       switchView('questsView');     }     function showCustomAlert(message) {       const alertOverlay = document.createElement('div');       alertOverlay.style.cssText = `         position: fixed;         top: 0;         left: 0;         right: 0;         bottom: 0;         background: rgba(0, 0, 0, 0.7);         backdrop-filter: blur(5px);         z-index: 2000;         display: flex;         justify-content: center;         align-items: center;         animation: fadeIn 0.3s ease;       `;       const progressPercent = Math.min((currentPlayer.quests_completed / quests.length) * 100, 100);       const alertBox = document.createElement('div');       alertBox.style.cssText = `         background: linear-gradient(135deg, rgba(0, 255, 200, 0.08) 0%, rgba(255, 0, 150, 0.05) 100%);         border: 3px solid rgba(0, 255, 200, 0.5);         border-radius: 20px;         padding: 2.5rem;         max-width: 500px;         box-shadow: 0 0 50px rgba(0, 255, 200, 0.4);         text-align: center;         animation: slideIn 0.4s ease;       `;       alertBox.innerHTML = `         <div style="color: #00ffcc; font-size: 1.8rem; font-weight: 700; margin-bottom: 1.5rem; white-space: pre-wrap; letter-spacing: 1px;">${message}</div>         <div style="background: rgba(0, 255, 200, 0.1); border: 2px solid rgba(0, 255, 200, 0.3); border-radius: 12px; padding: 2rem; margin-bottom: 2rem;">           <div style="color: #00ffff; font-size: 1rem; margin-bottom: 1rem; font-weight: 700;">🎯 Geschikt voor HBO</div>           <div style="font-size: 2.5rem; color: #00ffcc; font-weight: 900; margin-bottom: 1rem; letter-spacing: 2px;">${Math.round(progressPercent)}%</div>           <div style="width: 100%; height: 20px; background: rgba(0, 255, 200, 0.1); border: 2px solid rgba(0, 255, 200, 0.3); border-radius: 10px; overflow: hidden; margin-bottom: 1rem;">             <div style="width: ${progressPercent}%; height: 100%; background: linear-gradient(90deg, #00ffcc 0%, #ff00ff 100%); box-shadow: 0 0 15px rgba(0, 255, 200, 0.8); transition: width 0.6s ease;"></div>           </div>           <div style="color: #00ffcc; font-size: 0.95rem; font-weight: 600;">${currentPlayer.quests_completed} / ${quests.length} Quests Voltooid</div>         </div>         <button style="           background: linear-gradient(135deg, #00ffcc 0%, #ff00ff 100%);           color: #000;           border: none;           padding: 1.2rem 2.5rem;           border-radius: 10px;           cursor: pointer;           font-weight: 700;           font-size: 1.1rem;           transition: all 0.3s ease;           box-shadow: 0 0 20px rgba(0, 255, 200, 0.6);           letter-spacing: 1px;           width: 100%;         " onmouseover="this.style.transform='translateY(-4px)'; this.style.boxShadow='0 0 40px rgba(0, 255, 200, 0.8)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 0 20px rgba(0, 255, 200, 0.6)'" onclick="this.closest('div').parentElement.remove()">OK</button>       `;       alertOverlay.appendChild(alertBox);       document.body.appendChild(alertOverlay);     }     function initMatcher() {       const questionsDiv = document.getElementById('matcherQuestions');       questionsDiv.innerHTML = '';              matcherQuestions.forEach((question, qIdx) => {         const qCard = document.createElement('div');         qCard.style.marginBottom = '1.5rem';         qCard.innerHTML = `           <div style="color: #00ffcc; font-weight: 700; margin-bottom: 0.75rem; font-size: 1.05rem;">V${qIdx + 1}: ${question.q}</div>         `;                  const optionsDiv = document.createElement('div');         optionsDiv.style.display = 'flex';         optionsDiv.style.flexDirection = 'column';         optionsDiv.style.gap = '0.5rem';                  question.options.forEach((option, oIdx) => {           const label = document.createElement('label');           label.style.cssText = 'display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem; background: rgba(0, 255, 200, 0.05); border: 2px solid rgba(0, 255, 200, 0.2); border-radius: 8px; cursor: pointer; transition: all 0.3s ease;';           label.onmouseover = function() { this.style.background = 'rgba(0, 255, 200, 0.1)'; this.style.borderColor = 'rgba(0, 255, 200, 0.4)'; };           label.onmouseout = function() { this.style.background = 'rgba(0, 255, 200, 0.05)'; this.style.borderColor = 'rgba(0, 255, 200, 0.2)'; };                      const radio = document.createElement('input');           radio.type = 'radio';           radio.name = `question-${qIdx}`;           radio.value = oIdx;           radio.style.cursor = 'pointer';                      const text = document.createElement('span');           text.textContent = option.text;           text.style.color = '#00ffff';           text.style.flex = '1';                      label.appendChild(radio);           label.appendChild(text);           optionsDiv.appendChild(label);         });                  qCard.appendChild(optionsDiv);         questionsDiv.appendChild(qCard);       });     }     function calculateMatch() {       const scores = {         ict: 0,         cmd: 0,         data: 0,         business: 0       };       matcherQuestions.forEach((question, qIdx) => {         const selected = document.querySelector(`input[name="question-${qIdx}"]:checked`);         if (!selected) return;                  const optionValues = question.options[parseInt(selected.value)].values;                  // Map traits to directions         Object.entries(optionValues).forEach(([trait, value]) => {           if (trait === 'tech') scores.ict += value;           if (trait === 'logic') scores.ict += value;           if (trait === 'creative') scores.cmd += value;           if (trait === 'artistic') scores.cmd += value;           if (trait === 'visual') scores.cmd += value;           if (trait === 'analytical') scores.data += value;           if (trait === 'math') scores.data += value;           if (trait === 'leadership') scores.business += value;           if (trait === 'business') scores.business += value;           if (trait === 'people') scores.business += value;           if (trait === 'problem_solving') scores.ict += value;         });       });       showMatchResults(scores);     }     function showMatchResults(scores) {       const sorted = Object.entries(scores)         .sort((a, b) => b[1] - a[1])         .map(([id, score]) => ({           id,           score,           dir: directions.find(d => d.id === id),           percentage: Math.round((score / 40) * 100)         }));       const resultsDiv = document.getElementById('matcherResults');       resultsDiv.innerHTML = '';       sorted.forEach((result, idx) => {         const rank = idx === 0 ? '🏆 #1 JOU BESTE MATCH!' : idx === 1 ? '🥈 #2 Ook een Goede Optie' : '#3 Interessant';         const color = idx === 0 ? '#00ffcc' : '#ff00ff';                  const card = document.createElement('div');         card.className = 'info-card';         card.style.borderColor = color;         card.style.borderWidth = idx === 0 ? '3px' : '2px';         card.style.background = idx === 0 ? 'linear-gradient(135deg, rgba(0, 255, 200, 0.15) 0%, rgba(255, 0, 150, 0.08) 100%)' : 'linear-gradient(135deg, rgba(0, 255, 200, 0.08) 0%, rgba(255, 0, 150, 0.05) 100%)';                  card.innerHTML = `           <div style="display: flex; justify-content: space-between; align-items: start; gap: 1rem; margin-bottom: 1rem;">             <div>               <div style="font-size: 0.85rem; color: ${color}; font-weight: 700; letter-spacing: 1px; margin-bottom: 0.5rem;">${rank}</div>               <div style="font-size: 1.5rem; color: #00ffcc; font-weight: 700; margin-bottom: 0.5rem;">${result.dir.emoji} ${result.dir.name}</div>               <div style="color: #00ffff; font-size: 0.95rem;">${result.dir.description}</div>             </div>             <div style="text-align: right;">               <div style="font-size: 2.5rem; color: ${color}; font-weight: 900; letter-spacing: 2px;">${result.percentage}%</div>               <div style="color: #00ffff; font-size: 0.85rem; font-weight: 600;">Match</div>             </div>           </div>                      <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; margin: 1.5rem 0; padding: 1rem 0; border-top: 1px solid rgba(0, 255, 200, 0.2); border-bottom: 1px solid rgba(0, 255, 200, 0.2);">             <div>               <div style="color: #00ffcc; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.25rem;">💰 STARTLOON</div>               <div style="color: #ff00ff; font-weight: 700; font-size: 1.1rem;">${result.dir.salary}</div>             </div>             <div>               <div style="color: #00ffcc; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.25rem;">📊 WERKLOOSHEID</div>               <div style="color: #00ffcc; font-weight: 700; font-size: 1.1rem;">${result.dir.unemployment}</div>             </div>           </div>                      <div style="background: rgba(0, 255, 200, 0.05); padding: 1rem; border-radius: 8px; border-left: 4px solid ${color};">             <div style="color: #00ffcc; font-weight: 600; margin-bottom: 0.5rem; font-size: 0.9rem;">✨ WAT JE DOET:</div>             <div style="color: #00ffff; line-height: 1.6; font-size: 0.9rem;">${result.dir.description}</div>           </div>         `;                  resultsDiv.appendChild(card);       });       switchView('matcherResultsView');     }     function showCustomAlert(message) {       const alertOverlay = document.createElement('div');       alertOverlay.style.cssText = `         position: fixed;         top: 0;         left: 0;         right: 0;         bottom: 0;         background: rgba(0, 0, 0, 0.7);         backdrop-filter: blur(5px);         z-index: 2000;         display: flex;         justify-content: center;         align-items: center;         animation: fadeIn 0.3s ease;       `;       const progressPercent = Math.min((currentPlayer.quests_completed / quests.length) * 100, 100);       const alertBox = document.createElement('div');       alertBox.style.cssText = `         background: linear-gradient(135deg, rgba(0, 255, 200, 0.08) 0%, rgba(255, 0, 150, 0.05) 100%);         border: 3px solid rgba(0, 255, 200, 0.5);         border-radius: 20px;         padding: 2.5rem;         max-width: 500px;         box-shadow: 0 0 50px rgba(0, 255, 200, 0.4);         text-align: center;         animation: slideIn 0.4s ease;       `;       alertBox.innerHTML = `         <div style="color: #00ffcc; font-size: 1.8rem; font-weight: 700; margin-bottom: 1.5rem; white-space: pre-wrap; letter-spacing: 1px;">${message}</div>         <div style="background: rgba(0, 255, 200, 0.1); border: 2px solid rgba(0, 255, 200, 0.3); border-radius: 12px; padding: 2rem; margin-bottom: 2rem;">           <div style="color: #00ffff; font-size: 1rem; margin-bottom: 1rem; font-weight: 700;">🎯 Geschikt voor HBO</div>           <div style="font-size: 2.5rem; color: #00ffcc; font-weight: 900; margin-bottom: 1rem; letter-spacing: 2px;">${Math.round(progressPercent)}%</div>           <div style="width: 100%; height: 20px; background: rgba(0, 255, 200, 0.1); border: 2px solid rgba(0, 255, 200, 0.3); border-radius: 10px; overflow: hidden; margin-bottom: 1rem;">             <div style="width: ${progressPercent}%; height: 100%; background: linear-gradient(90deg, #00ffcc 0%, #ff00ff 100%); box-shadow: 0 0 15px rgba(0, 255, 200, 0.8); transition: width 0.6s ease;"></div>           </div>           <div style="color: #00ffcc; font-size: 0.95rem; font-weight: 600;">${currentPlayer.quests_completed} / ${quests.length} Quests Voltooid</div>         </div>         <button style="           background: linear-gradient(135deg, #00ffcc 0%, #ff00ff 100%);           color: #000;           border: none;           padding: 1.2rem 2.5rem;           border-radius: 10px;           cursor: pointer;           font-weight: 700;           font-size: 1.1rem;           transition: all 0.3s ease;           box-shadow: 0 0 20px rgba(0, 255, 200, 0.6);           letter-spacing: 1px;           width: 100%;         " onmouseover="this.style.transform='translateY(-4px)'; this.style.boxShadow='0 0 40px rgba(0, 255, 200, 0.8)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 0 20px rgba(0, 255, 200, 0.6)'" onclick="this.closest('div').parentElement.remove()">OK</button>       `;       alertOverlay.appendChild(alertBox);       document.body.appendChild(alertOverlay);     }     lucide.createIcons();
+    </script>
+    <script>
+      (function () {
+        function c() {
+          var b = a.contentDocument || a.contentWindow.document;
+          if (b) {
+            var d = b.createElement("script");
+            d.innerHTML =
+              "window.__CF$cv$params={r:'9e46d6551319ea4b',t:'MTc3NDg3MDgwMi4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";
+            b.getElementsByTagName("head")[0].appendChild(d);
+          }
+        }
+        if (document.body) {
+          var a = document.createElement("iframe");
+          a.height = 1;
+          a.width = 1;
+          a.style.position = "absolute";
+          a.style.top = 0;
+          a.style.left = 0;
+          a.style.border = "none";
+          a.style.visibility = "hidden";
+          document.body.appendChild(a);
+          if ("loading" !== document.readyState) c();
+          else if (window.addEventListener)
+            document.addEventListener("DOMContentLoaded", c);
+          else {
+            var e = document.onreadystatechange || function () {};
+            document.onreadystatechange = function (b) {
+              e(b);
+              "loading" !== document.readyState &&
+                ((document.onreadystatechange = e), c());
+            };
+          }
+        }
+      })();
+    </script>
+  </body>
+</html>
